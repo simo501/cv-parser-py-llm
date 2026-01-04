@@ -1,0 +1,12 @@
+ocred pdfs/
+ready pdfs/
+ready pdfs copy/
+ready pdfs backup/
+vanilla pdfs/
+vanilla pdfs copy/
+ready text/
+ocr forced/
+output/
+nlp-tests/
+database.json
+.
