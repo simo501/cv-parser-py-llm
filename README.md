@@ -1,6 +1,9 @@
 # cv-parser-py-llm
 
-parse various curriculum vitae using your own keywords and LLMs 
+This project does not aim to parse a cv in its entirety, as it would be too hard and tedious.
+
+The goal is to extract a person’s educational background from a dataset of heterogeneous curricula vitae
+
 
 ---
 

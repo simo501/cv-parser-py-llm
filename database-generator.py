@@ -7,12 +7,10 @@ from models_database import *
 
 def get_filenames(input_folder):
     try:
-        # Ottiene tutti gli elementi nella cartella
         elementi = os.listdir(input_folder)
-        # Filtra solo i file (esclude le sottocartelle)
-        # files = [f for f in elementi if os.path.isfile(os.path.join(input_folder, f))]
         files = []
         for f in elementi:
+            # se non sono sotto cartelle ne file dot 
             if os.path.isfile(os.path.join(input_folder,f)) and f[0] != ".":
                 files.append(f)
         return tuple(files)
@@ -24,10 +22,8 @@ def get_filenames(input_folder):
         return ()
 
 def parse_filename(filename):
-
     if (filename[0] == "."):
         return None
-
     sub = re.sub(r'\d', '', filename)
     sub = sub.strip("_")
     sub = sub.strip(".txt")
@@ -36,14 +32,13 @@ def parse_filename(filename):
     return sub.replace("_", " ").title()
 
 
-def word_with_context(testo, keywords, n_parole_prima=3, n_parole_dopo=15):
+def word_with_context(testo, keywords, n_parole_prima=6, n_parole_dopo=12):
     # Divide il testo in parole
     parole = re.findall(r'\b\w+\b', testo.lower())
     
     occurences_list = []
     
     for parola in keywords:
-        
         for i, p in enumerate(parole):
             if p == parola.lower():
                 # Prendi n parole prima
@@ -79,14 +74,10 @@ def dump_by_keywords(input_folder, keywords, output_file=False):
                   encoding="utf-8", 
                   errors="ignore") as file:
             person_name = parse_filename(filename)
-            #print(f"analyzing: {person_name}")
-
             testo = file.read().lower()
-            
-            occurrences = word_with_context(testo, keywords)
-            
+            occurrences = word_with_context(testo, keywords)            
             try:
-                utente = Utente(nome=person_name, occorrenze=occurrences)
+                utente = UtenteOccorrenze(nome=person_name, occorrenze=occurrences)
             except ValidationError as err:
                 print(f"There's ({filename}) causing problems\n{err}")
             user_list.append(utente)
@@ -94,7 +85,7 @@ def dump_by_keywords(input_folder, keywords, output_file=False):
             print("\r" + str(cnt_analyzed_files) + "/" + str(files_number), end="", flush=True)
 
     if (output_file):
-        body = Body(utenti=user_list)
+        body = BodyUtenti(utenti=user_list)
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(body.model_dump(), f, indent=4, ensure_ascii=False)
         
@@ -113,7 +104,7 @@ def main():
     # "universit" 
     # ha lo scopo di evitare problemi di encoding di sorta che possono nascera a causa 
     # della a accentata in università 
-    dump_by_keywords(args.input_folder, ["universit", "liceo", "laurea", "diploma"], args.output_json)
+    dump_by_keywords(args.input_folder, ["universit", "liceo", "diploma"], args.output_json)
 
 
 if __name__ == "__main__":

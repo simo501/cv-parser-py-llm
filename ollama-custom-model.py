@@ -1,8 +1,20 @@
 import ollama
 
+print("Deleting old model")
+
+ollama.delete(model='universities-finder:latest')
+
+print("Creating ollama model...")
+
 ollama.create(model='universities-finder', 
                       from_='qwen3:8b', 
-                      system="Sei uno strumento che analizza del testo, non puoi commentare nulla ne fare domande, hai l obbligo di rispondere nella maniera in cui ti specifico io di seguito: Devi estrarre dal testo che ti viene inoltrato solo 3 cose. 1. Università (obbligatoriamente) 2. il corso di laurea (non obbligatorio) 3. il voto di laurea (non obbligatorio)",)
+                      system="Sei uno strumento che analizza del testo quindi NON puoi COMMENTARE e NON fare DOMANDE. " \
+                      "Devi estrarre dal testo che ti viene fornito solo 3 cose: Università (che può essere scritto come universit), Corso di Laurea e Voto di Laurea" \
+                      "Hai l'obbligo di rispondere seguendo questo format della risposta:" \
+                      "Università:" \
+                      "Corso di Laurea:" \
+                      "Voto di Laurea:" \
+                      "il primo ed il secondo campo sono obbligatori, devono contenere entrambi al massimo una cosa e devono avere senso, il terzo completalo solo quando lo trovi con certezza",)
 
 def check_model(model_name):
     # Recupera la lista dei modelli presenti
@@ -11,8 +23,8 @@ def check_model(model_name):
     print(models)
     
     if model_name in models:
-        print(f"Il modello \t{model_name}\t è disponibile.")
+        print(f"The model \t{model_name}\t is available.")
     else:
-        print(f"Modello \t{model_name}\t non trovato.")
+        print(f"The model \t{model_name}\t is not available.")
 
 check_model('universities-finder:latest')
