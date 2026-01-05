@@ -2,6 +2,7 @@ import argparse
 import os 
 import re
 import json
+from models_database import *
 
 
 def get_filenames(input_folder):
@@ -9,7 +10,11 @@ def get_filenames(input_folder):
         # Ottiene tutti gli elementi nella cartella
         elementi = os.listdir(input_folder)
         # Filtra solo i file (esclude le sottocartelle)
-        files = [f for f in elementi if os.path.isfile(os.path.join(input_folder, f))]
+        # files = [f for f in elementi if os.path.isfile(os.path.join(input_folder, f))]
+        files = []
+        for f in elementi:
+            if os.path.isfile(os.path.join(input_folder,f)) and f[0] != ".":
+                files.append(f)
         return tuple(files)
     except FileNotFoundError:
         print(f"Errore: la input_folder '{input_folder}' non esiste")
@@ -23,29 +28,21 @@ def parse_filename(filename):
     if (filename[0] == "."):
         return None
 
-    # leviamo i numeri che non sono prevedibili
     sub = re.sub(r'\d', '', filename)
-    # leviamo gli underscores
     sub = sub.strip("_")
-    # estensione
     sub = sub.strip(".txt")
-    # rimuoviamo cv eliminando gli ultimi 2 caratteri
     sub = sub[:-2]
-    # leviamo ulteriori under scores fastidiosi
     sub = sub.strip("_")
-    # sub = sub.replace("_", " ")
-    return sub
+    return sub.replace("_", " ").title()
 
 
 def word_with_context(testo, keywords, n_parole_prima=3, n_parole_dopo=15):
     # Divide il testo in parole
     parole = re.findall(r'\b\w+\b', testo.lower())
-    risultati = {}
+    
+    occurences_list = []
     
     for parola in keywords:
-        
-        contatore_occorrenze = 0
-        dizionario_occorrenze = {}
         
         for i, p in enumerate(parole):
             if p == parola.lower():
@@ -57,55 +54,51 @@ def word_with_context(testo, keywords, n_parole_prima=3, n_parole_dopo=15):
                 fine = min(len(parole), i + n_parole_dopo + 1)
                 dopo = parole[i+1:fine] # nella forma di list
                 
-                contatore_occorrenze += 1
-
-                # rendiamo prima e dopo string uniche
+                # rendiamo prima e dopo (che sono 2 list) string uniche
                 prima_joined = " ".join(prima)
                 dopo_joined  = " ".join(dopo)
-
-                # destrutturazione in prima e dopo
-                # dizionario_occorrenze[contatore_occorrenze] = {"prima": prima_joined, "dopo": dopo_joined}
                 text = " ".join([prima_joined, parola, dopo_joined]) 
-                dizionario_occorrenze[contatore_occorrenze] = {"text" : text}
-
-                # risultati.append((prima, p, dopo))
-
-        risultati[parola] = dizionario_occorrenze
+                try:
+                    occurences_list.append(Occorrenza(parola=parola, testo=text))
+                except ValidationError as err:
+                    print(f"There's some problem with one occurence\n{err}")
     
-    # ritorna ad un json con oggetto la persona ed oggetto annidato le parole
-    # e le occorrenze
-    return risultati
+    return occurences_list
 
 
-def analyze_for_keywords(input_folder, keywords, output_file=False):
-    index_file_analyzed = 0
+def dump_by_keywords(input_folder, keywords, output_file=False):
+    cnt_analyzed_files = 0
     
-    ret_dict = {}
+    user_list = []
+    files= get_filenames(input_folder)
+    files_number = len(files)
 
-    for filename in get_filenames(input_folder):
-        index_file_analyzed += 1
+    for filename in files:
         with open("".join([input_folder, filename]), 
                   "r", 
                   encoding="utf-8", 
                   errors="ignore") as file:
-            nome = parse_filename(filename)
-            print(f"sto analizzando {nome}")
+            person_name = parse_filename(filename)
+            #print(f"analyzing: {person_name}")
 
-            # leggiamo tutto il testo per SENZA case sensitive
             testo = file.read().lower()
             
-            ret_analysis = word_with_context(testo, keywords)
+            occurrences = word_with_context(testo, keywords)
             
-            # oggetto json padre con nome persona
-            ret_dict[nome] = ret_analysis
-
-    print(json.dumps(ret_dict, indent=4))
+            try:
+                utente = Utente(nome=person_name, occorrenze=occurrences)
+            except ValidationError as err:
+                print(f"There's ({filename}) causing problems\n{err}")
+            user_list.append(utente)
+            cnt_analyzed_files += 1
+            print("\r" + str(cnt_analyzed_files) + "/" + str(files_number), end="", flush=True)
 
     if (output_file):
+        body = Body(utenti=user_list)
         with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(ret_dict, f, indent=4, ensure_ascii=False)
+            json.dump(body.model_dump(), f, indent=4, ensure_ascii=False)
         
-    print(f"analizzati {index_file_analyzed} files.\n")
+    print(f"\n{cnt_analyzed_files} files analyzed.\n")
 
 
     
@@ -120,7 +113,7 @@ def main():
     # "universit" 
     # ha lo scopo di evitare problemi di encoding di sorta che possono nascera a causa 
     # della a accentata in università 
-    analyze_for_keywords(args.input_folder, ["universit", "liceo", "laurea", "diploma"], args.output_json)
+    dump_by_keywords(args.input_folder, ["universit", "liceo", "laurea", "diploma"], args.output_json)
 
 
 if __name__ == "__main__":
